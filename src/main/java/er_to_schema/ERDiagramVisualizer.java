@@ -53,25 +53,46 @@ public class ERDiagramVisualizer {
     public static void printSchema(List<Entity> entities, List<Relationship> relationships) {
         for (Entity entity : entities) {
             System.out.println("CREATE TABLE " + entity.name + " (");
-            // Assuming entities have attributes, I'll need to iterate through them here
-            // Example:
-            // for (Attribute attr : entity.attributes) {
-            //     System.out.println("  " + attr.name + " " + attr.type + ","); 
-            // }
-            System.out.println("  PRIMARY KEY (...)"); // Define primary key based on your ER model
+            for (int i = 0; i < entity.attributes.size(); i++) {
+                String attribute = entity.attributes.get(i);
+                System.out.print("  " + attribute);
+                if (i == 0) { // Assuming the first attribute is always the primary key
+                    System.out.println(" INT PRIMARY KEY,"); 
+                } else {
+                    System.out.println(" VARCHAR(255),"); 
+                }
+            }
             System.out.println(");");
             System.out.println();
         }
 
+
         for (Relationship rel : relationships) {
-            // Handle relationship-to-table mapping based on schema generation rules.
-            // This will involve creating additional tables or adding foreign keys 
-            // depending on the relationship type (one-to-one, one-to-many, many-to-many)
-            // and database design choices. 
-            // For simplicity, I'll be just print a comment indicating the relationship:
-            System.out.println("-- Relationship: " + rel.toString()); 
+            if (rel.type.equals("many-to-many")) {
+                // Create a junction table for many-to-many relationships
+                System.out.println("CREATE TABLE " + rel.entity1.name + "_" + rel.entity2.name + " (");
+                System.out.println("  " + rel.entity1.name.toLowerCase() + "_id INT,");
+                System.out.println("  " + rel.entity2.name.toLowerCase() + "_id INT,");
+                System.out.println("  PRIMARY KEY (" + rel.entity1.name.toLowerCase() + "_id, " + 
+                                                   rel.entity2.name.toLowerCase() + "_id),");
+                System.out.println("  FOREIGN KEY (" + rel.entity1.name.toLowerCase() + "_id) REFERENCES " + 
+                                                   rel.entity1.name + "(id),");
+                System.out.println("  FOREIGN KEY (" + rel.entity2.name.toLowerCase() + "_id) REFERENCES " + 
+                                                   rel.entity2.name + "(id)");
+                System.out.println(");");
+                System.out.println();
+            } else {
+                // For one-to-one and many-to-one, add a foreign key to the "many" side 
+                Entity manySide = (rel.type.equals("one-to-many")) ? rel.entity2 : rel.entity1; 
+                System.out.println("ALTER TABLE " + manySide.name + " ADD COLUMN " + 
+                                   rel.entity1.name.toLowerCase() + "_id INT,");
+                System.out.println("ADD FOREIGN KEY (" + rel.entity1.name.toLowerCase() + "_id) REFERENCES " + 
+                                   rel.entity1.name + "(id);"); 
+                System.out.println();
+            }
         }
     }
+
 
     public static void main(String[] args) {
         List<Entity> entities = new ArrayList<>();
